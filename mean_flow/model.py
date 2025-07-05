@@ -1,26 +1,26 @@
+import torch.nn as nn 
 import torch
-import torch.nn as nn
-import numpy as np
+import numpy as np 
 
 
-def build_mlp(input_dim, output_dim, hidden_dim, n_hidden):
+def build_mlp(input_dim, output_dim, hidden_dim, n_hidden, act):
     layers = []
     layers.append(nn.Linear(input_dim, hidden_dim))
-    layers.append(nn.ReLU())
+    layers.append(act())
     for _ in range(n_hidden - 1): 
         layers.append(nn.Linear(hidden_dim, hidden_dim))
-        layers.append(nn.ReLU())
+        layers.append(act())
 
     layers.append(nn.Linear(hidden_dim, output_dim))
     return nn.Sequential(*layers)
 
 
 class MeanFlowModel(torch.nn.Module): 
-    def __init__(self, input_dim, output_dim, dim, n_hidden, time_embed_dim=32):     
+    def __init__(self, input_dim, output_dim, dim, n_hidden, act, time_embed_dim):     
         super().__init__()
         self.time_embed_dim = time_embed_dim
-        self.net = build_mlp(input_dim + 2 * time_embed_dim, output_dim, dim, n_hidden)
-    
+        self.act = act 
+        self.net = build_mlp(input_dim + 2 * time_embed_dim, output_dim, dim, n_hidden, self.act)
 
     def time_embedding(self, t):
         """Create sinusoidal time embeddings."""
@@ -51,6 +51,6 @@ class MeanFlowModel(torch.nn.Module):
 
 
 
-def construct_mean_flow_model(input_dim, output_dim, dim, n_hidden, time_embed_dim=32): 
-    model = MeanFlowModel(input_dim, output_dim, dim, n_hidden, time_embed_dim)
+def construct_mean_flow_model(input_dim, output_dim, dim, n_hidden, act, time_embed_dim): 
+    model = MeanFlowModel(input_dim, output_dim, dim, n_hidden, act, time_embed_dim)
     return model 

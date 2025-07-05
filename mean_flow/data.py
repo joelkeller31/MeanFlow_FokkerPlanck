@@ -40,7 +40,7 @@ def generate_training_data(
         trajs[i+1, :, :d] = new_positions
         trajs[i+1, :, d] = ts[i+1]
 
-    return trajs # (shape n_points, N, d+1)
+    return trajs, ts # (shape n_points, N, d+1)
 
 def euler_maruyama_step(
     particle_pos: np.ndarray,  

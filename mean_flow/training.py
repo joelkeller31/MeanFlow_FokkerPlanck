@@ -53,6 +53,7 @@ class MeanFlowMatchingTrainer(Trainer):
                  model: torch.nn.Module, 
                  train_trajs: list,
                  batch_size: int,
+                 n_epochs: int
                 ):
         
         super().__init__(model)
@@ -60,6 +61,7 @@ class MeanFlowMatchingTrainer(Trainer):
         self.batch_size = batch_size
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.opt = opt
+        self.n_epochs = n_epochs
 
     def sample_t_and_r_indices(self, size, large_interval_prob=0.3):  
         # for anharmonic: 0.3
@@ -97,10 +99,10 @@ class MeanFlowMatchingTrainer(Trainer):
         train_trajs_tensor = torch.tensor(trajs)  # Convert to tensor
         
         # Extract positions and times
-        x_t = train_trajs_tensor[t_indices.long(), :, :2].float()  # Shape: (batch_size, 2)
-        x_r = train_trajs_tensor[r_indices.long(), :, :2].float()  # Shape: (batch_size, 2)
-        tau_t = train_trajs_tensor[t_indices.long(), :, 2:3].float()  # shape ([128, 1, 15, 1])
-        tau_r = train_trajs_tensor[r_indices.long(), :, 2:3].float()  
+        x_t = train_trajs_tensor[t_indices.long(), :, :2].squeeze(1).float().to(self.device)  # Shape: (batch_size, 2)
+        x_r = train_trajs_tensor[r_indices.long(), :, :2].squeeze(1).float().to(self.device)  # Shape: (batch_size, 2)
+        tau_t = train_trajs_tensor[t_indices.long(), :, 2:3].squeeze(1).float().to(self.device)  # shape ([128, 1, 15, 1])
+        tau_r = train_trajs_tensor[r_indices.long(), :, 2:3].squeeze(1).float().to(self.device)  
         return x_t, tau_t, x_r, tau_r
     
     def get_train_loss(self, epoch: int, **kwargs) -> torch.Tensor:
@@ -109,7 +111,6 @@ class MeanFlowMatchingTrainer(Trainer):
         
         
         x_t, tau_t, x_r, tau_r = self.get_space_and_time_for_idx(t_idx, r_idx, self.train_trajs)
-
         
         ep = torch.rand_like(tau_t)  
 
@@ -119,12 +120,8 @@ class MeanFlowMatchingTrainer(Trainer):
         alpha = (t_var - tau_r) / (tau_t - tau_r + 1e-8)
 
 
-        # interpolated_samples = x_r * (1 - alpha) + x_t * alpha
+        interpolated_samples = x_r * (1 - alpha) + x_t * alpha
         
-
-        # what if instead, we made an interpolation of the points we sampled, and then interpolated_samples just evaluates it at that time
-
-        interpolated_samples = x_r * (1 - alpha)**2 + x_t * alpha**2 + 2 * (x_r + x_t) * alpha * (1 - alpha)
         
         velocity = (x_t - x_r) / (tau_t - tau_r + 1e-8)
 
@@ -144,10 +141,14 @@ class MeanFlowMatchingTrainer(Trainer):
 
         u_tgt = velocity + (tau_t - tau_r) * dudt.detach()  
 
+
+        # might be useful to track per particle performance during training to penalize poorly learned trajectories
+        per_particle_mse = torch.mean((u - u_tgt)**2, dim=(0, 2)) 
+
         return torch.nn.functional.mse_loss(u, u_tgt)
 
 
-    def train(self, num_epochs: int, **kwargs):
+    def train(self, **kwargs):
 
 
         clip_max_norm= 3
@@ -155,7 +156,7 @@ class MeanFlowMatchingTrainer(Trainer):
         self.model.to(self.device)
         opt = self.opt
         
-        with tqdm(range(num_epochs), desc="Training") as pbar:
+        with tqdm(range(self.n_epochs), desc="Training") as pbar:
             for epoch in pbar:
                 opt.zero_grad()
                 loss = self.get_train_loss(epoch, **kwargs)
