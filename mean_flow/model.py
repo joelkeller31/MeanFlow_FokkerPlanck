@@ -3,14 +3,18 @@ import torch
 import numpy as np 
 
 
-def build_mlp(input_dim, output_dim, hidden_dim, n_hidden, act):
+
+def build_mlp(input_dim, output_dim, hidden_dim, n_hidden, act, dropout_rate=0.1):
     layers = []
     layers.append(nn.Linear(input_dim, hidden_dim))
-    layers.append(act())
-    for _ in range(n_hidden - 1): 
+    layers.append(act()) 
+    
+    for _ in range(n_hidden - 1):
         layers.append(nn.Linear(hidden_dim, hidden_dim))
         layers.append(act())
-
+        layers.append(nn.LayerNorm(hidden_dim))  
+        layers.append(nn.Dropout(dropout_rate)) 
+    
     layers.append(nn.Linear(hidden_dim, output_dim))
     return nn.Sequential(*layers)
 

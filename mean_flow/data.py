@@ -18,11 +18,10 @@ def generate_training_data(
 ) -> np.ndarray:
     
     ts = np.linspace(0, 1, n_steps + 1)
-    trajs = np.zeros((n_steps + 1, N, d + 1))  # Extra dimension for time
+    trajs = np.zeros((n_steps + 1, N, d + 1))  
     
-    # Set initial conditions
-    trajs[0, :, :d] = x0  # Position
-    trajs[0, :, d] = ts[0]  # Time
+    trajs[0, :, :d] = x0  
+    trajs[0, :, d] = ts[0]  
     
     for i in range(n_steps):
         # Update positions
@@ -36,7 +35,6 @@ def generate_training_data(
             forcing=forcing
         )
         
-        # Store positions and current time
         trajs[i+1, :, :d] = new_positions
         trajs[i+1, :, d] = ts[i+1]
 
@@ -50,12 +48,10 @@ def euler_maruyama_step(
     forcing: Callable[[np.ndarray, float], np.ndarray],
     rng: np.random.Generator,
     noisy: bool = False, 
-    mask: np.ndarray = None,
 ) -> np.ndarray:
-    # Compute drift
-    # Add noise
+    
     if noisy:
-        # Set seed for reproducibility
+
         noise = rng.normal(size=particle_pos.shape)
         diffusion = np.sqrt(2 * dt) * D_sqrt * noise
         return particle_pos + dt * forcing(particle_pos, t).reshape(particle_pos.shape) + diffusion

@@ -32,7 +32,7 @@ class MarginalFBTM():
     D_sqrt: np.ndarray
     d: int
     N: int
-
+    weight_decay: float
     learning_rate: float
 
     rng: np.random.Generator
@@ -47,10 +47,10 @@ class MarginalFBTM():
     def initialize_network_and_optimizer(self) -> None:
         
         self.network = construct_mean_flow_model(input_dim=self.d, output_dim=self.d, dim=self.n_x_neurons, n_hidden=self.n_hidden, act= self.act, time_embed_dim=self.n_t_neurons)
-        self.opt = torch.optim.RAdam(
+        self.opt = torch.optim.AdamW(
                     self.network.parameters(), 
                     self.learning_rate, 
-                    weight_decay=1e-5
+                    weight_decay=self.weight_decay
                 )
         
 
@@ -93,18 +93,18 @@ class MarginalFBTM():
             true_flat = true.flatten()
             correlation = torch.corrcoef(torch.stack([pred_flat, true_flat]))[0, 1]
             
-            print(f'Particle {p} Statistics:')
-            print(f'  Mean Error: {mean_error:.6f}')
-            print(f'  Std Error: {std_error:.6f}')
+            print(f'Particle {p+1} Statistics:')
+            # print(f'  Mean Error: {mean_error:.6f}')
+            # print(f'  Std Error: {std_error:.6f}')
             print(f'  MSE: {mse:.6f}')
-            print(f'  RMSE: {rmse:.6f}')
-            print(f'  MAE: {mae:.6f}')
+            # print(f'  RMSE: {rmse:.6f}')
+            # print(f'  MAE: {mae:.6f}')
             print(f'  Mean Euclidean Distance: {mean_euclidean_distance:.6f}')
             print(f'  Max Euclidean Distance: {max_euclidean_distance:.6f}')
-            print(f'  Mean Relative Error: {mean_relative_error:.6f}')
-            print(f'  Correlation: {correlation:.6f}')
+            # print(f'  Mean Relative Error:c {mean_relative_error:.6f}')
+            # print(f'  Correlation: {correlation:.6f}')
 
-    def plot_trajectories_2d(self, trajectory, true_traj_pts):
+    def plot_trajectories_2d(self, trajectory, true_traj_pts, n_x_neurons, n_t_neurons, n_hidden):
         trajectory = trajectory.cpu().detach().numpy() 
 
         # Create results directory if it doesn't exist
@@ -128,7 +128,7 @@ class MarginalFBTM():
         
         title = f'Generated Trajectories for {self.experiment} Experiment'
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"{self.experiment}_N{par}_T{tp}_{timestamp}.png"
+        filename = f"{self.experiment}_N{n_hidden}_X{n_x_neurons}_T_{n_t_neurons}_ts{timestamp}.png"
         plt.title(title)
         plt.xlabel("X Position")
         plt.ylabel("Y Position")
@@ -148,7 +148,7 @@ class MarginalFBTM():
         model = self.network
         indices = [i * int(ts.size/n_time_steps) for i in range( n_time_steps)  ]
         t_space = torch.tensor(ts[indices], dtype=torch.float32).to(Device)
-        print(f't space shape: {t_space.shape}')
+
         dt = 1 / n_time_steps
 
         n_particles, dim = initial_position.shape

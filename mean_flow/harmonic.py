@@ -47,16 +47,18 @@ sig0 = 0.25
 
 
 ### Set up neural network
-n_hidden = 4
+### more spread
+n_hidden = 6
 n_x_neurons=256
-n_t_neurons=32
-n_epochs = 3000
-learning_rate=0.0025
+n_t_neurons=8
+n_epochs = 2000
+learning_rate=1e-4
+act = torch.nn.GELU
 
-act = torch.nn.ReLU
+batch_size =  1024
 
-batch_size =  256 
-num_trajectories = 50
+weight_decay=2e-6
+
 
 def construct_simulation():
 
@@ -74,6 +76,7 @@ def construct_simulation():
     "d": d,
     "Noisy": Noisy, 
     "learning_rate": learning_rate,
+    "weight_decay": weight_decay,
     "n_hidden": n_hidden,
     "n_x_neurons": n_x_neurons,
     "n_t_neurons": n_t_neurons,
@@ -82,8 +85,7 @@ def construct_simulation():
     "rng": rng,
     "experiment": experiment,
     "n_time_steps": n_time_steps,
-    "batch_size": batch_size, 
-    "num_trajectories": num_trajectories
+    "batch_size": batch_size 
     }
     
     tot_params = {** sim_params}
@@ -101,5 +103,6 @@ if __name__ == '__main__':
     trajs, ts = sim.generate_training_trajectories()
     sim.train_flow_matching(trajs)
     initial_conditions=torch.tensor(trajs[0, :, :-1]) 
-    positions, indices = sim.mean_flow_trajectory_simulator(initial_conditions, 25, ts)
+    positions, indices = sim.mean_flow_trajectory_simulator(initial_conditions, 15, ts)
     sim.generate_validation_stats(trajectory=positions, true_traj_pts=trajs, indices=indices)
+    sim.plot_trajectories_2d(trajectory=positions, true_traj_pts=trajs, n_x_neurons = n_x_neurons, n_t_neurons = n_t_neurons, n_hidden = n_hidden)

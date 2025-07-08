@@ -26,7 +26,6 @@ class Trainer(ABC):
         self.model.train()
 
 
-        # Train loop
         pbar = tqdm(enumerate(range(num_epochs)))
         for idx, epoch in pbar:
             opt.zero_grad()
@@ -35,17 +34,11 @@ class Trainer(ABC):
             opt.step()
             pbar.set_description(f'Epoch {idx}, loss: {loss.item()}')
 
-        # Finish
         self.model.eval()
 
 
 
-def time_check(t_times, r_times): 
-    tp = t_times.shape
-    print('checking times ... ')
-    print(f'tp shape: {tp}')
-    for t in range(tp): 
-        assert t_times[t] > r_times[t]
+
         
 class MeanFlowMatchingTrainer(Trainer):
     def __init__(self, 
@@ -63,33 +56,23 @@ class MeanFlowMatchingTrainer(Trainer):
         self.opt = opt
         self.n_epochs = n_epochs
 
-    def sample_t_and_r_indices(self, size, large_interval_prob=0.3):  
-        # for anharmonic: 0.3
-        # for harmonic: 0.15
+    def sample_t_and_r_indices(self, size, epoch):  
 
-
-        bins = torch.linspace(0, 5000, steps=size+1)
-
+        progress = epoch / self.n_epochs
+        shift_ratio = 1 / (1 + torch.exp(torch.tensor(-10) * (progress - 0.75)))
+        bin_start = 2500 * shift_ratio  
+        bin_end = 2500 + 2500 * shift_ratio  
+        bins = torch.linspace(bin_start, bin_end, steps=size+1)
 
         t = torch.zeros(size)
         r = torch.zeros(size)
         for i in range(size):
             lower = bins[i]
             upper = bins[i+1]
-            
-            if torch.rand(1) < large_interval_prob and i < size-1:  # Large interval case
-                max_jump = min(4, size-i-1)
-                bin_jump = torch.randint(1, max_jump+1, (1,)).item() if max_jump > 0 else 1
-                jump_lower = bins[i + bin_jump]
-                jump_upper = bins[i + bin_jump + 1]
-                
-                t[i] = torch.rand(1) * (upper - lower) + lower
-                r[i] = torch.rand(1) * (jump_upper - jump_lower) + jump_lower
-            else:  # Small interval case
-                samples = torch.rand(2) * (upper - lower) + lower
-                t[i], r[i] = samples.max(), samples.min()
+
+            samples = torch.rand(2) * (upper - lower) + lower
+            t[i], r[i] = samples.max(), samples.min()
         
-        # Ensure t > r by swapping where needed
         swap_mask = t < r
         t[swap_mask], r[swap_mask] = r[swap_mask], t[swap_mask]
         
@@ -106,7 +89,8 @@ class MeanFlowMatchingTrainer(Trainer):
         return x_t, tau_t, x_r, tau_r
     
     def get_train_loss(self, epoch: int, **kwargs) -> torch.Tensor:
-        t_idx, r_idx = self.sample_t_and_r_indices(self.batch_size)
+
+        t_idx, r_idx = self.sample_t_and_r_indices(self.batch_size, epoch)
         train_trajs_tensor = torch.tensor(self.train_trajs)  
         
         
@@ -136,22 +120,29 @@ class MeanFlowMatchingTrainer(Trainer):
         u, dudt = torch.func.jvp(
             lambda x, t, r: model_forward(x, t),  
             (interpolated_samples, t_var, tau_r),  
-            vectors,  # Vectors for jvp
+            vectors,  # differentiate wrt time 
         )
 
         u_tgt = velocity + (tau_t - tau_r) * dudt.detach()  
+        
 
-
-        # might be useful to track per particle performance during training to penalize poorly learned trajectories
-        per_particle_mse = torch.mean((u - u_tgt)**2, dim=(0, 2)) 
-
-        return torch.nn.functional.mse_loss(u, u_tgt)
-
-
+        batch_mean = u.mean(dim=1, keepdim=True)
+        batch_std = u.std(dim=1, keepdim=True)   
+        
+        normalized_errors = (u - u_tgt) / (batch_std + 1e-8)
+        mse_loss = torch.mean(normalized_errors**2)
+        
+        mean_loss = torch.nn.functional.mse_loss(batch_mean, u_tgt.mean(dim=1, keepdim=True))
+        std_loss = torch.nn.functional.mse_loss(batch_std, u_tgt.std(dim=1, keepdim=True))
+        
+        # played around with training on the std and mean, works well for harmonic but not for anharmonic experiemnt. 
+        # return mse_loss + 0.3 * std_loss + 0.3 * mean_loss
+        return mse_loss 
+    
     def train(self, **kwargs):
 
 
-        clip_max_norm= 3
+        clip_max_norm= 0.1
 
         self.model.to(self.device)
         opt = self.opt

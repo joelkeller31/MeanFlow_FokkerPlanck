@@ -29,7 +29,7 @@ else:
 #work on this
 N = 10  # number of particles
 d = 2   # dimension
-A = 5 # interaction strength
+A = 3 # interaction strength
 r = 0.2  # particle size
 D = 0.005  # diffusion coefficient
 R = np.sqrt(5 *N)*r
@@ -56,16 +56,17 @@ sig0 = 0.01
 
 experiment = "Anharmonic"
 
-### Set up neural network
-n_hidden = 5
+
+### more spread
+n_hidden = 8
 n_x_neurons=256
-n_t_neurons=32
-n_epochs = 2000
-learning_rate=0.01
-act = torch.nn.SiLU
+n_t_neurons=8 
+n_epochs = 3500
+learning_rate=1e-5
+act = torch.nn.GELU
 
+weight_decay=5e-6
 batch_size =  1024
-
 
 def construct_simulation():
 
@@ -83,6 +84,7 @@ def construct_simulation():
     "d": d,
     "Noisy": Noisy, 
     "learning_rate": learning_rate,
+    "weight_decay": weight_decay,
     "n_hidden": n_hidden,
     "n_x_neurons": n_x_neurons,
     "n_t_neurons": n_t_neurons,
@@ -108,6 +110,6 @@ if __name__ == '__main__':
     trajs, ts = sim.generate_training_trajectories()
     sim.train_flow_matching(trajs)
     initial_conditions=torch.tensor(trajs[0, :, :-1]) 
-    positions, indices = sim.mean_flow_trajectory_simulator(initial_conditions, 25, ts)
+    positions, indices = sim.mean_flow_trajectory_simulator(initial_conditions, 15, ts)
     sim.generate_validation_stats(trajectory=positions, true_traj_pts=trajs, indices=indices)
-    # sim.plot_trajectories_2d(trajectory=positions, true_traj_pts=trajs)
+    sim.plot_trajectories_2d(trajectory=positions, true_traj_pts=trajs, n_x_neurons = n_x_neurons, n_t_neurons = n_t_neurons, n_hidden = n_hidden)
