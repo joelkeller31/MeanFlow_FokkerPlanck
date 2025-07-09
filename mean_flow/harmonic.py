@@ -96,7 +96,6 @@ def construct_simulation():
 
 
 if __name__ == '__main__':
-    # start = time.time()
     sim = construct_simulation()
     sim.initialize_network_and_optimizer()
     sim.initialize_forcing()

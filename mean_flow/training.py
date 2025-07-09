@@ -60,16 +60,16 @@ class MeanFlowMatchingTrainer(Trainer):
 
 
     def sample_t_and_r_indices(self, size, epoch):  
+        " sampling procedure gradually adds more indices during training"
         progress = epoch / self.n_epochs
 
-        # Sigmoid that starts moving early and reaches 1 at 75% progress
+        # sigmoid to determine end point based on progress
         shift_ratio = 1 / (1 + torch.exp(torch.tensor(-8) * (progress - 0.5)))
 
-        # Expand from 0-1000 to 0-5000 at 75% progress
+
         window_start = 0
         window_end = 1000 + int(4000 * shift_ratio.item())  # 1000 to 5000
 
-        # Use the expanding window
         bins = torch.linspace(window_start, window_end, steps=size+1)
 
         if epoch % 100 == 0: 
@@ -88,8 +88,6 @@ class MeanFlowMatchingTrainer(Trainer):
         t[swap_mask], r[swap_mask] = r[swap_mask], t[swap_mask]
         
         return t.unsqueeze(1), r.unsqueeze(1)
-
-
 
 
 
@@ -143,10 +141,16 @@ class MeanFlowMatchingTrainer(Trainer):
         u_centered = u - u.mean(dim=1, keepdim=True)
         u_tgt_centered = u_tgt - u_tgt.mean(dim=1, keepdim=True)
 
+        # mse captures overall shape but fails to capture mean
         mse_loss = torch.nn.functional.mse_loss(u, u_tgt)
+        # penalize mean term 
         huber_loss = torch.nn.functional.huber_loss(u_centered, u_tgt_centered)
 
         return mse_loss + 0.4 * huber_loss
+    
+
+        # alternative metrics to penalize mean and std, works well for harmonic but not for anharmonic
+        
         # batch_mean = u.mean(dim=1, keepdim=True)
         # batch_std = u.std(dim=1, keepdim=True)   
         
@@ -155,11 +159,7 @@ class MeanFlowMatchingTrainer(Trainer):
         
         # mean_loss = torch.nn.functional.mse_loss(batch_mean, u_tgt.mean(dim=1, keepdim=True))
         # std_loss = torch.nn.functional.mse_loss(batch_std, u_tgt.std(dim=1, keepdim=True))
-        
-        # huber_loss = torch.nn.functional.huber_loss(u, u_tgt)
-        # # played around with training on the std and mean, works well for harmonic but not for anharmonic experiemnt. 
-        # # return mse_loss + 0.3 * std_loss + 0.3 * mean_loss
-        # return mse_loss + 0.3 * mean_loss + 0.2 * std_loss
+                # # return mse_loss + 0.3 * std_loss + 0.3 * mean_loss
     
     def train(self, **kwargs):
 

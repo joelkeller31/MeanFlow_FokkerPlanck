@@ -65,44 +65,33 @@ class MarginalFBTM():
     def generate_validation_stats(self, trajectory, indices, true_traj_pts): 
         true_traj_pts = torch.tensor(true_traj_pts[indices]).to(Device)
         
+
+        #iterate through the particles
         for p in range(trajectory.size(1)): 
             pred = trajectory[:, p, :]
             true = true_traj_pts[:, p, :-1]
             
-            # Basic statistics
             mean_error = torch.mean(pred - true)
             std_error = torch.std(pred - true)
             
-            # Distance-based metrics
             mse = torch.mean((pred - true) ** 2)
-            rmse = torch.sqrt(mse)
-            mae = torch.mean(torch.abs(pred - true))
+            
                         
             # Euclidean distance per time step
             euclidean_distances = torch.norm(pred - true, dim=1)
             mean_euclidean_distance = torch.mean(euclidean_distances)
             max_euclidean_distance = torch.max(euclidean_distances)
             
-            # Relative error (avoid division by zero)
-            true_norms = torch.norm(true, dim=1)
-            relative_errors = euclidean_distances / torch.clamp(true_norms, min=1e-8)
-            mean_relative_error = torch.mean(relative_errors)
             
-            # Correlation coefficient
-            pred_flat = pred.flatten()
-            true_flat = true.flatten()
-            correlation = torch.corrcoef(torch.stack([pred_flat, true_flat]))[0, 1]
             
             print(f'Particle {p+1} Statistics:')
             # print(f'  Mean Error: {mean_error:.6f}')
             # print(f'  Std Error: {std_error:.6f}')
             print(f'  MSE: {mse:.6f}')
-            # print(f'  RMSE: {rmse:.6f}')
-            # print(f'  MAE: {mae:.6f}')
+            
             print(f'  Mean Euclidean Distance: {mean_euclidean_distance:.6f}')
             print(f'  Max Euclidean Distance: {max_euclidean_distance:.6f}')
-            # print(f'  Mean Relative Error:c {mean_relative_error:.6f}')
-            # print(f'  Correlation: {correlation:.6f}')
+            
 
     def plot_trajectories_2d(self, trajectory, true_traj_pts, n_x_neurons, n_t_neurons, n_hidden):
         trajectory = trajectory.cpu().detach().numpy() 
