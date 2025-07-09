@@ -49,9 +49,9 @@ sig0 = 0.25
 ### Set up neural network
 ### more spread
 n_hidden = 6
-n_x_neurons=256
+n_x_neurons=128
 n_t_neurons=8
-n_epochs = 2000
+n_epochs = 3500
 learning_rate=1e-4
 act = torch.nn.GELU
 

@@ -58,9 +58,9 @@ experiment = "Anharmonic"
 
 
 ### more spread
-n_hidden = 8
-n_x_neurons=256
-n_t_neurons=8 
+n_hidden = 6
+n_x_neurons=128
+n_t_neurons=8
 n_epochs = 3500
 learning_rate=1e-5
 act = torch.nn.GELU
