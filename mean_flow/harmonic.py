@@ -37,7 +37,7 @@ compute_mut = lambda t: np.array([amp(t)*np.cos(np.pi*freq*t), amp(t)*np.sin(np.
 drift = drifts.harmonic_trap
 force_args = (compute_mut, N, d)
 mu0 = np.tile(compute_mut(0), N)
-Noisy = False
+Noisy = True
 
 experiment = "Harmonic"
 
@@ -45,20 +45,14 @@ experiment = "Harmonic"
 sig0 = 0.25
 
 
-
-### Set up neural network
-### more spread
-n_hidden = 6
-n_x_neurons=128
-n_t_neurons=8
-n_epochs = 3500
-learning_rate=1e-4
-act = torch.nn.GELU
-
-batch_size =  1024
-
-weight_decay=2e-6
-
+n_hidden = 4                
+n_x_neurons = 64             
+n_t_neurons = 8             
+n_epochs = 3000              
+learning_rate = 3e-5         
+act = torch.nn.GELU          
+weight_decay = 1e-5
+batch_size = 512   
 
 def construct_simulation():
 

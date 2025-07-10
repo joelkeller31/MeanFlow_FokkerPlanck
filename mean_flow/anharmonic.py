@@ -29,9 +29,9 @@ else:
 #work on this
 N = 10  # number of particles
 d = 2   # dimension
-A = 3 # interaction strength
+A = 1 # interaction strength
 r = 0.2  # particle size
-D = 0.005  # diffusion coefficient
+D = .03 # diffusion coefficient
 R = np.sqrt(5 *N)*r
 B = D/R**2  # trap strength
 D_sqrt = np.sqrt(D)
@@ -39,7 +39,7 @@ amp = lambda t: 2
 freq = np.pi
 drift = drifts.anharmonic_gaussian
 
-Noisy = False 
+Noisy = True 
 
 circular = True
 
@@ -57,16 +57,19 @@ sig0 = 0.01
 experiment = "Anharmonic"
 
 
-### more spread
-n_hidden = 6
-n_x_neurons=128
-n_t_neurons=8
-n_epochs = 3500
-learning_rate=1e-5
-act = torch.nn.GELU
 
-weight_decay=5e-6
-batch_size =  1024
+
+
+n_hidden = 4                
+n_x_neurons = 64             
+n_t_neurons = 8             
+n_epochs = 3000              
+learning_rate = 3e-5         
+act = torch.nn.GELU          
+weight_decay = 1e-5
+batch_size = 512              
+
+
 
 def construct_simulation():
 

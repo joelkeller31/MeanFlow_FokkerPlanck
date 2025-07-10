@@ -137,7 +137,7 @@ class MarginalFBTM():
         model = self.network
         indices = [i * int(ts.size/n_time_steps) for i in range( n_time_steps)  ]
         t_space = torch.tensor(ts[indices], dtype=torch.float32).to(Device)
-
+        print(f' t space')
         dt = 1 / n_time_steps
 
         n_particles, dim = initial_position.shape
