@@ -13,7 +13,7 @@ Device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 ######## Configuation Parameters #########
 ## physical, non-forcing parameters
 d = 2
-D = 0.01
+D = 0.75
 dt = 1e-3
 tf = 5
 n_time_steps = int(tf / dt)
@@ -90,12 +90,18 @@ def construct_simulation():
 
 
 if __name__ == '__main__':
+    # start = time.time()
     sim = construct_simulation()
     sim.initialize_network_and_optimizer()
     sim.initialize_forcing()
-    trajs, ts = sim.generate_training_trajectories()
-    sim.train_flow_matching(trajs)
-    initial_conditions=torch.tensor(trajs[0, :, :-1]) 
-    positions, indices = sim.mean_flow_trajectory_simulator(initial_conditions, 15, ts)
-    sim.generate_validation_stats(trajectory=positions, true_traj_pts=trajs, indices=indices)
-    sim.plot_trajectories_2d(trajectory=positions, true_traj_pts=trajs, n_x_neurons = n_x_neurons, n_t_neurons = n_t_neurons, n_hidden = n_hidden)
+    print('Generating Trajectories: ...')
+    clean_trajs, noisy_trajs, ts = sim.generate_training_trajectories()
+    # sim.compare_noisy_and_clean(clean_trajs, noisy_trajs)
+    learned_vector_field = sim.train_flow_matching(clean_trajs)
+    sim.initialize_noisy_model(learned_vector_field)
+    sim.train_residual(noisy_trajs)
+    sim.plot_entropy()
+    # initial_conditions=torch.tensor(noisy_trajs[0, :, :-1]) 
+    # positions, indices = sim.mean_flow_trajectory_simulator(initial_conditions, 15, ts)
+    # sim.generate_validation_stats(trajectory=positions, true_traj_pts=noisy_trajs, indices=indices)
+    # sim.plot_trajectories_2d(trajectory=positions, true_traj_pts=noisy_trajs, n_x_neurons = n_x_neurons, n_t_neurons = n_t_neurons, n_hidden = n_hidden)

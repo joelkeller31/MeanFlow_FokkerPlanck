@@ -41,17 +41,25 @@ def harmonic_trap(
     return particle_forces.ravel()
 
 
-def gaussian_interaction(
-    xs: np.ndarray,
-    A: float,
-    r: float,
-    N: int
-) -> np.ndarray:
-    particle_diffs = xs[:, None, :] - xs[None, :, :]  # (N, N, d)
+# def gaussian_interaction(
+#     xs: np.ndarray,
+#     A: float,
+#     r: float,
+#     N: int
+# ) -> np.ndarray:
+#     particle_diffs = xs[:, None, :] - xs[None, :, :]  # (N, N, d)
+#     dist_sq = np.sum(particle_diffs**2, axis=2)
+#     gauss_facs = np.exp(-dist_sq / (2*r**2))
+#     interaction = (A/(N*r**2)) * np.sum(particle_diffs * gauss_facs[:, :, None], axis=1)
+#     return interaction
+
+
+
+def gaussian_interaction(xs: np.ndarray, A: float, r: float, N: int):
+    particle_diffs = xs[:, None, :] - xs[None, :, :]
     dist_sq = np.sum(particle_diffs**2, axis=2)
-    gauss_facs = np.exp(-dist_sq / (2*r**2))
-    interaction = (A/(N*r**2)) * np.sum(particle_diffs * gauss_facs[:, :, None], axis=1)
-    return interaction
+    gauss_facs = np.exp(-dist_sq/(1.5*r**2))  # Wider interaction range
+    return (2*A/(N*r**2)) * np.sum(particle_diffs * gauss_facs[:, :, None], axis=1)
 
 
 def anharmonic_gaussian(

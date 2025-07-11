@@ -2,9 +2,6 @@
 import numpy as np
 from typing import Callable, Tuple, Union
 
-
-
-
 def generate_training_data(
     n_steps: int,
     dt: float,
@@ -18,15 +15,25 @@ def generate_training_data(
 ) -> np.ndarray:
     
     ts = np.linspace(0, 1, n_steps + 1)
-    trajs = np.zeros((n_steps + 1, N, d + 1))  
+    # Initialize trajectories with correct shapes
+    clean_trajs = np.zeros((n_steps + 1, N, d + 1))  # Last dimension for time
+    noisy_trajs = np.zeros((n_steps + 1, N, d + 1))  # Last dimension for time
     
-    trajs[0, :, :d] = x0  
-    trajs[0, :, d] = ts[0]  
+    # Set identical initial conditions
+    clean_trajs[0, :, :d] = x0
+    noisy_trajs[0, :, :d] = x0  # Same initial positions
+    
+    # Set initial times correctly
+    clean_trajs[0, :, d] = ts[0]
+    noisy_trajs[0, :, d] = ts[0]
     
     for i in range(n_steps):
-        # Update positions
-        new_positions = euler_maruyama_step(
-            particle_pos=trajs[i, :, :d],
+        # Use the SAME positions for both clean and noisy at each step
+        current_positions = clean_trajs[i, :, :d]
+        
+        clean_step, noisy_step = euler_maruyama_step(
+            clean_particle_pos=current_positions.copy(),
+            noisy_particle_pos=current_positions.copy(),  # Start from same point
             t=ts[i],
             D_sqrt=D_sqrt,
             dt=dt,
@@ -35,13 +42,17 @@ def generate_training_data(
             forcing=forcing
         )
         
-        trajs[i+1, :, :d] = new_positions
-        trajs[i+1, :, d] = ts[i+1]
+        # Update trajectories
+        clean_trajs[i+1, :, :d] = clean_step
+        noisy_trajs[i+1, :, :d] = noisy_step
+        clean_trajs[i+1, :, d] = ts[i+1]
+        noisy_trajs[i+1, :, d] = ts[i+1]
 
-    return trajs, ts # (shape n_points, N, d+1)
+    return clean_trajs, noisy_trajs, ts
 
 def euler_maruyama_step(
-    particle_pos: np.ndarray,  
+    clean_particle_pos: np.ndarray,  
+    noisy_particle_pos: np.ndarray,  
     t: float,
     D_sqrt: float,
     dt: float,
@@ -49,14 +60,10 @@ def euler_maruyama_step(
     rng: np.random.Generator,
     noisy: bool = False, 
 ) -> np.ndarray:
-    
-    if noisy:
 
-        noise = rng.normal(size=particle_pos.shape)
-        diffusion = np.sqrt(2 * dt) * D_sqrt * noise
-        return particle_pos + dt * forcing(particle_pos, t).reshape(particle_pos.shape) + diffusion
-    else:
-        return particle_pos + dt * forcing(particle_pos, t).reshape(particle_pos.shape)
-    
+    clean_step = clean_particle_pos + dt * forcing(clean_particle_pos, t).reshape(clean_particle_pos.shape)
+    noisy_step= noisy_particle_pos + dt * forcing(noisy_particle_pos, t).reshape(noisy_particle_pos.shape) + np.sqrt(2 * dt) * D_sqrt * rng.normal(size=noisy_particle_pos.shape)
+    return clean_step, noisy_step
+
 
 
