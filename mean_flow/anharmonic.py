@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 
 Device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 d = 2
-D = 0.25
+# D = 0.25
 dt = 1e-3
 tf = 5
 n_time_steps = int(tf / dt)
@@ -26,28 +26,20 @@ if repeatable_seed:
 else:
     rng = np.random.default_rng()
 
-#work on this
-# N = 10  # number of particles
-# d = 2   # dimension
-# A = 1.5 # interaction strength
-# r = 0.2  # particle size
-# D = .75 # diffusion coefficient
-# R = np.sqrt(5 *N)*r
-# B = D/R**2  # trap strength
 
 
-N = 10       # Keep same particle count
-d = 2        # Keep 2D system
-A = 10      # Increased from 1.5 (stronger attractive interactions)
-r = 0.15     # Reduced from 0.2 (smaller particle size = denser packing)
-D = 0.2      # Reduced from 0.75 (less diffusion/dispersion)
-R = np.sqrt(5*N)*r  # Automatically smaller due to smaller r
-B = 0.8*D/R**2 
+N = 10     
+d = 2       
+A = 10     
+r = 0.15     
+D = 0.25   
+R = np.sqrt(5*N)*r  
+B = D/R**2 
 
 
 D_sqrt = np.sqrt(D)
-amp = lambda t: 3
-freq = np.pi
+amp = lambda t: 2
+freq = np.pi/2
 drift = drifts.anharmonic_gaussian
 
 Noisy = True 
@@ -72,13 +64,21 @@ experiment = "Anharmonic"
 
 
 n_hidden = 4                
-n_x_neurons = 128             
+n_x_neurons = 256             
 n_t_neurons = 32            
-n_epochs = 800         
-learning_rate = 3e-5         
+n_epochs = 4000      
+
+
+
+n_hidden_noisy = 6              
+n_x_neurons_noisy = 128             
+n_t_neurons_noisy = 32            
+n_epochs_noisy = 2000         
+
+learning_rate = 1e-4 
 act = torch.nn.GELU          
 weight_decay = 1e-5
-batch_size = 128              
+batch_size = 64              
 
 
 
@@ -103,6 +103,10 @@ def construct_simulation():
     "n_x_neurons": n_x_neurons,
     "n_t_neurons": n_t_neurons,
     "n_epochs": n_epochs,
+    "n_hidden_noisy": n_hidden_noisy,
+    "n_x_neurons_noisy": n_x_neurons_noisy,
+    "n_t_neurons_noisy": n_t_neurons_noisy,
+    "n_epochs_noisy": n_epochs_noisy,
     "act": act,
     "rng": rng,
     "n_time_steps": n_time_steps,
@@ -124,11 +128,10 @@ if __name__ == '__main__':
     print('Generating Trajectories: ...')
     clean_trajs, noisy_trajs, ts = sim.generate_training_trajectories()
     # sim.compare_noisy_and_clean(clean_trajs, noisy_trajs)
-    learned_vector_field = sim.train_flow_matching(clean_trajs)
-    sim.initialize_noisy_model(learned_vector_field)
-    sim.train_residual(noisy_trajs)
+    learned_vector_field = sim.train_flow_matching(clean_trajs, noisy_trajs)
+    initial_conditions=torch.tensor(noisy_trajs[0, :, :-1]) 
+
+    positions, means, covs, indices = sim.mean_flow_trajectory_simulator(initial_conditions, 10, ts, model = learned_vector_field)
+    # sim.plot_trajectories_2d(learned_traj=positions, noisy_traj=noisy_trajs, clean_traj=clean_trajs, n_x_neurons = n_x_neurons, n_t_neurons = n_t_neurons, n_hidden = n_hidden)
+    sim.plot_means_and_covs(means, covs)
     sim.plot_entropy()
-    # initial_conditions=torch.tensor(noisy_trajs[0, :, :-1]) 
-    # positions, indices = sim.mean_flow_trajectory_simulator(initial_conditions, 15, ts)
-    # sim.generate_validation_stats(trajectory=positions, true_traj_pts=noisy_trajs, indices=indices)
-    # sim.plot_trajectories_2d(trajectory=positions, true_traj_pts=noisy_trajs, n_x_neurons = n_x_neurons, n_t_neurons = n_t_neurons, n_hidden = n_hidden)

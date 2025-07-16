@@ -15,25 +15,23 @@ def generate_training_data(
 ) -> np.ndarray:
     
     ts = np.linspace(0, 1, n_steps + 1)
-    # Initialize trajectories with correct shapes
-    clean_trajs = np.zeros((n_steps + 1, N, d + 1))  # Last dimension for time
-    noisy_trajs = np.zeros((n_steps + 1, N, d + 1))  # Last dimension for time
+    clean_trajs = np.zeros((n_steps + 1, N, d + 1)) 
+    noisy_trajs = np.zeros((n_steps + 1, N, d + 1))  
     
-    # Set identical initial conditions
     clean_trajs[0, :, :d] = x0
-    noisy_trajs[0, :, :d] = x0  # Same initial positions
+    noisy_trajs[0, :, :d] = x0  
     
     # Set initial times correctly
     clean_trajs[0, :, d] = ts[0]
     noisy_trajs[0, :, d] = ts[0]
     
     for i in range(n_steps):
-        # Use the SAME positions for both clean and noisy at each step
         current_positions = clean_trajs[i, :, :d]
-        
+        noisy_positions = noisy_trajs[i, :, :d]
+
         clean_step, noisy_step = euler_maruyama_step(
             clean_particle_pos=current_positions.copy(),
-            noisy_particle_pos=current_positions.copy(),  # Start from same point
+            noisy_particle_pos=noisy_positions.copy(),  
             t=ts[i],
             D_sqrt=D_sqrt,
             dt=dt,

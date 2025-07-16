@@ -13,7 +13,7 @@ Device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 ######## Configuation Parameters #########
 ## physical, non-forcing parameters
 d = 2
-D = 0.75
+D = 0.25
 dt = 1e-3
 tf = 5
 n_time_steps = int(tf / dt)
@@ -41,18 +41,18 @@ Noisy = True
 
 experiment = "Harmonic"
 
-## initial distribution parameters
 sig0 = 0.25
 
 
-n_hidden = 4                
+n_hidden =   2        
 n_x_neurons = 64             
-n_t_neurons = 8             
-n_epochs = 3000              
-learning_rate = 3e-5         
+n_t_neurons = 8           
+n_epochs = 2500  
+
+learning_rate = 3e-4
 act = torch.nn.GELU          
-weight_decay = 1e-5
-batch_size = 512   
+weight_decay = 6e-6
+batch_size = 512     
 
 def construct_simulation():
 
@@ -89,19 +89,18 @@ def construct_simulation():
 
 
 
+
 if __name__ == '__main__':
     # start = time.time()
     sim = construct_simulation()
     sim.initialize_network_and_optimizer()
     sim.initialize_forcing()
-    print('Generating Trajectories: ...')
     clean_trajs, noisy_trajs, ts = sim.generate_training_trajectories()
     # sim.compare_noisy_and_clean(clean_trajs, noisy_trajs)
-    learned_vector_field = sim.train_flow_matching(clean_trajs)
-    sim.initialize_noisy_model(learned_vector_field)
-    sim.train_residual(noisy_trajs)
-    sim.plot_entropy()
-    # initial_conditions=torch.tensor(noisy_trajs[0, :, :-1]) 
-    # positions, indices = sim.mean_flow_trajectory_simulator(initial_conditions, 15, ts)
-    # sim.generate_validation_stats(trajectory=positions, true_traj_pts=noisy_trajs, indices=indices)
-    # sim.plot_trajectories_2d(trajectory=positions, true_traj_pts=noisy_trajs, n_x_neurons = n_x_neurons, n_t_neurons = n_t_neurons, n_hidden = n_hidden)
+    learned_vector_field = sim.train_flow_matching(clean_trajs, noisy_trajs)
+    initial_conditions=torch.tensor(noisy_trajs[0, :, :-1]) 
+
+    positions, means, covs, analytical_cov, timepoints = sim.mean_flow_trajectory_simulator(initial_conditions, 5, ts, model = learned_vector_field)
+    sim.plot_trajectories_2d(learned_traj=positions, noisy_traj=noisy_trajs, clean_traj=clean_trajs, n_x_neurons = n_x_neurons, n_t_neurons = n_t_neurons, n_hidden = n_hidden)
+    sim.plot_means_and_covs(means, covs, analytical_cov, timepoints)
+    # sim.plot_entropy()
